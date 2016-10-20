@@ -1,0 +1,114 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="cp1251">
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+		<script src="https://cdn.anychart.com/js/7.11.1/anychart-bundle.min.js"></script>
+		<link rel="stylesheet" href="https://cdn.anychart.com/css/latest/anychart-ui.min.css" />
+		<script type="text/javascript">
+			var groups = [];
+			
+			window.onload = init;
+		
+			function init() {
+				document.getElementById('file-input').addEventListener('change', readJSON, false);
+			}
+						
+			function readJSON(jsonFile) {
+				var file = jsonFile.target.files[0];
+				if (!file) {
+					return;
+				}
+				var reader = new FileReader();
+				reader.onload = function(e) {
+					var lines = JSON.parse(e.target.result);
+					var list = [];
+					var group, parameter, value;
+					for (i = 0; i < lines.data.length; i++) {
+						group = lines.data[i]['Область'];
+						parameter = lines.data[i]['Город'];
+						value = lines.data[i]['Значение']
+						if (list.indexOf(group) == -1) {
+							list.push(group);
+							groups[group] = [];
+						}
+						groups[group].push([parameter, value]);
+					}
+					updateDrpDown(list);
+					updateChart();
+				}
+				reader.readAsText(file)
+			}
+			
+			function updateDrpDown(list) {
+				var select = document.getElementById("group-select");
+				if (select == null) {
+					select = document.createElement("select");
+					select.id = "group-select";
+					select.setAttribute("onChange", "updateChart()");
+					document.getElementsByTagName('body')[0].appendChild(select);
+				}
+				for (i = select.length; i >= 0; i--) {
+					select.remove(i);
+				}
+				for (i = 0; i < list.length; i++) {
+					var option = document.createElement("option");
+					option.text = list[i];
+					select.add(option, null);
+				}
+			}
+			
+			function updateChartContainer() {
+				var element = document.getElementById("container");
+				if (element != null) {
+					element.parentNode.removeChild(element);
+				}
+				var chartDiv = document.createElement("div");
+				chartDiv.id = "container";
+				chartDiv.style = "width: 800px; height: 600px;";
+				document.getElementsByTagName('body')[0].appendChild(chartDiv);
+			}
+			
+			function updateChart() {
+				updateChartContainer();
+				var group = document.getElementById("group-select").value;
+				chart = anychart.column();	// create column chart
+				chart.animation(true);	// turn on chart animation
+				chart.title(group);	// set chart title text settings
+				
+				console.log(groups[group])
+
+				// create area series with passed data
+				var series = chart.column(groups[group]);
+
+				// set series tooltip settings
+				series.tooltip().titleFormatter(function() {
+					return this.x
+				});
+
+				series.tooltip().textFormatter(function() {
+					return parseInt(this.value).toLocaleString()
+				});
+				series.tooltip().position('top').anchor('bottom').offsetX(0).offsetY(5);
+
+				
+				chart.yScale().minimum(0);	// set scale minimum
+				chart.yAxis().labels().textFormatter("{%Value}");	// set yAxis labels formatter
+
+				// tooltips position and interactivity settings
+				chart.tooltip().positionMode('point');
+				chart.interactivity().hoverMode('byX');
+
+				// axes titles
+				chart.xAxis().title('Город');
+				chart.yAxis().title('Значение');
+
+				chart.container('container');	// set container id for the chart				
+				chart.draw();	// initiate chart drawing
+			}
+		</script>
+	</head>
+	<body>
+		<input type="file" id="file-input" style="margin: 15px;" />
+	</body>
+</html>
